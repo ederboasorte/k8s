@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: httpd
+    ambiente: producao
+  name: httpd
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+        ambiente: producao
+    spec:
+      containers:
+      - image: httpd
+        name: httpd

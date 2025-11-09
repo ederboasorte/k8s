@@ -153,6 +153,15 @@ etcdctl snapshot restore snapshot.db
 
 
 
+--sintaxe do yaml
+kubectl explain deployment
+kubectl explain deployment.metadata
+kubectl explain deployment.spec
+
+
+
+
+
 
 --krew como instalar
 apt install git
@@ -289,3 +298,100 @@ kubectl multcontainer-pod -n default -ti -c apline -- sh
 
 
 --Deployment
+--Verificar qual apiVersao usar
+kubectl api-resource | grep -i deploy
+
+--Gerar um exemplo de Deployment
+kubectl create deploy --image httpd httpd
+kubectl get deploy httpd -o yaml | kubectl neat > deployment_httpd.yaml
+ou
+kubectl create deploy --image httpd httpd --replicas 3 --dry-run=client -o yaml | kubectl neat >  deployment_httpd.yaml
+cat deployment_httpd.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: httpd
+  name: httpd
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+      - image: httpd
+        name: httpd
+
+kubectl apply -f deployment_httpd.yaml
+kubectl get deploy
+kubectl get replicaset 
+kubectl get po
+kubectl get replicasets
+
+
+
+
+
+
+
+
+
+--Labels e selectors
+kubectl get deploy --show-labels
+kubectl get po --show-labels
+
+cat deployment_httpd.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: httpd
+    ambiente: producao
+  name: httpd
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+        ambiente: producao
+    spec:
+      containers:
+      - image: httpd
+        name: httpd
+
+kubectl apply -f deployment_httpd.yaml
+kubectl get deploy --show-labels
+kubectl get deploy -l ambiente=producao
+kubectl get po --show-labels
+kubectl get po -l ambiente=producao
+
+
+
+
+
+
+
+
+
+
+--Rollout
+--histoty
+kubectl rollout history deployment/httpd
+
+--Rollback
+kubectl rollout undo deployment/httpd --to-revison=3
+
+--restart
+kubectl rollout restart deployment/httpd
+
+
+
