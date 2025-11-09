@@ -1,0 +1,291 @@
+
+
+
+--Pre requisitos (control-pane e data-plane)
+vi /etc/fstab
+swapoff -a
+
+cat <<EOF | tee /etc/sysctl.d/k8s.conf
+net.ipv4.ip_forward = 1
+EOF
+
+sysctl --system
+
+echo "br_netfilter" >> /etc/modules-load.d/modules.conf
+modprobe br_netfilter
+lsmod | grep -i br_netfilter
+
+apt-get update
+apt-get install ca-certificates curl
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update
+apt-get install -y containerd.io 
+apt-get install -y docker-ce docker-ce-cli docker-buildx-plugin docker-compose-plugin
+
+containerd config default > /etc/containerd/config.toml
+systemctl restart containerd
+systemctl status containerd
+
+apt-get install -y apt-transport-https ca-certificates curl gpg
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+
+apt-get update
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+systemctl enable --now kubelet
+dpkg -l | grep kube
+
+
+--Validar cgroup sta usando (systemctl que esta como o mesmo cgroup abaixo)
+mount | grep -i cgroup
+--saida: cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime)
+
+--configurar cgroup
+vi /etc/containerd/config.toml
+SystemdCgroup = true
+
+systemctl restart containerd
+systemctl status containerd
+
+
+
+
+
+--instalar cluster com kubeadm (apenas no control-plane)
+--OBS: adicionar o nome do servidor no /etc/hosts
+vi /etc/hosts
+192.168.15.210 control-plane
+
+vi kubeadm-config.yaml
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 192.168.15.210
+  bindPort: 6443
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+networking:
+  podSubnet: "10.244.0.0/16"
+---  
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+
+
+kubeadm --config kubeadm-config.yaml
+
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+--validar ps containers em execução via containerd
+crictl ps
+crictl logs -f 824dce7f424c7
+
+--instalar driver de rede
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+
+--Adicionar nós data-plane ao cluster (rodar no control-plane)
+kubeadm token create --print-join-command
+
+
+
+
+
+
+
+
+
+--kubeconfig
+export KUBECONFIG=$HOME/.kube/<nome_do_config>
+ou 
+KUBECONFIG=$HOME/.kube/<nome_do_config> kubectl get po -A
+ou
+kubectl get po -A --kubeconfig <nome_do_config>
+
+--validar
+env | grep KUBE
+
+--remover variavel
+unset KUBECONFIG
+
+
+
+
+
+
+--ETCD
+apt-get install etcd-client
+etcdctl
+cd /etc/kubernetes/pki/etcd
+ETCDDCTL_API=3 etcdctl --cacert $(pwd)/ca.crt --cert $(pwd)/server.crt --key $(pwd)/server.key member list --write-out table
+
+vi etcdctl.env
+export ETCDCTL_CACERT=/etc/kubernetes/pki/etcd/ca.crt
+export ETCDCTL_CERT=/etc/kubernetes/pki/etcd/server.crt
+export ETCDCTL_KEY=/etc/kubernetes/pki/etcd/server.key
+export ETCDCTL_API=3
+
+source etcdctl.env
+
+
+--Backup etcd
+cd /var/lib/etcd #pode salvar em qualquer lugar
+etcdctl snapshot save snapshot.db
+
+--Restore etcd
+cd /var/lib/etcd 
+etcdctl snapshot restore snapshot.db
+
+
+
+
+
+
+
+
+--krew como instalar
+apt install git
+
+(
+  set -x; cd "$(mktemp -d)" &&
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+  KREW="krew-${OS}_${ARCH}" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+  tar zxvf "${KREW}.tar.gz" &&
+  ./"${KREW}" install krew
+)
+
+vi .profile
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+kubectl krew install neat
+
+kubectl get po -n kube-flannel kube-flannel-ds-qrdpf -oyaml | kubectl neat
+
+
+
+
+
+
+
+
+
+--Namespace
+kubectl create ns vicosa --dry-run=client -oyaml | kubectl neat > na.yaml
+kubectl apply -f ns.yaml
+
+kubectl run meu-pod --image=nginx:latest --dry-run=client -oyaml | kubectl neat > pod.yaml
+vi pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: meu-pod
+  namespace: vicosa
+spec:
+  containers:
+  - image: nginx:latest
+    name: meu-pod
+
+kubectl apply -f pod.yaml
+kubectl get po -n vicosa
+
+
+
+
+
+
+
+
+
+
+
+
+--Initcontainer
+vi pod_initcontainer.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-cd
+  namespace: default
+spec:
+  containers:
+  - image: nginx:1.14.2
+    name: nginx
+	ports:
+	- containerPort: 80
+  initContainers:
+  - name: waitfordns
+    image: busybox:1.28
+	command:
+	- sh
+	- -c
+	- until nslookup mymysql; do echo "Tentando resolver nome"; sleep 2; done
+	
+kubectl apply -f pod_initcontainer.yaml
+	
+--validar logs do Pod
+kubectl logs -f nginx-cd -n default
+
+--validar logs do container dentro do pod
+kubectl logs -f nginx-cd -n default -c waitfordns
+
+
+
+
+
+
+
+
+
+
+--Multi Containers
+vi pod_multicontainers.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: multcontainer-pod
+  name: multcontainer-pod
+spec:
+  containers:
+  - image: httpd
+    name: httpd
+  - image: alpine
+    name: alpine
+    command:
+      - "sleep"
+      - "9999999"
+	  
+kubectl apply -f pod_multicontainers.yaml
+	
+--validar logs do Pod
+kubectl logs -f multcontainer-pod -n default
+kubectl dexcribe pod multcontainer-pod -n default
+
+--validar logs do container dentro do pod
+kubectl logs -f multcontainer-pod -n default -c httpd
+kubectl logs -f multcontainer-pod -n default -c apline
+
+--Entrar nos containers
+kubectl multcontainer-pod -n default -ti -c httpd -- sh
+kubectl multcontainer-pod -n default -ti -c apline -- sh 
+
+
+
+
+
+
+
+--Deployment
