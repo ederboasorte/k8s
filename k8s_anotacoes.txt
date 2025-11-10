@@ -395,3 +395,116 @@ kubectl rollout restart deployment/httpd
 
 
 
+
+
+
+
+
+
+
+
+--Strategia (strategy)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: httpd
+    ambiente: producao
+  name: httpd
+spec:
+  strategy: 
+    rollingUpdate:
+      maxSurge: 10%
+      maxUnavailable: 0
+  replicas: 4
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+        ambiente: producao
+    spec:
+      containers:
+      - image: httpd
+        name: httpd
+
+
+
+
+
+
+
+
+--Scalar manualmente um deploy
+kubectl get po 
+kubectl scale deploy httpd --replicas 2
+kubectl get po 
+
+
+
+
+
+
+
+
+--resource (limitar recursos)
+request = inicia com x% de cpu ou memoria 
+limits = maximo de recuros que o container pode usar
+
+vi deployment_httpd.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: httpd
+    ambiente: producao
+  name: httpd
+spec:
+  strategy: 
+    rollingUpdate:
+      maxSurge: 10%
+      maxUnavailable: 0
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+        ambiente: producao
+    spec:
+      containers:
+      - image: httpd
+        name: httpd
+        resources:
+          requests:
+            cpu: 100m
+            memory: 56M
+          limits:
+            cpu: 200m
+            memory: 128M
+
+kubectl apply -f deployment_httpd.yaml
+kubectl get po 
+kubectl describe po httpd-5dc75759f6-q4w92
+kubectl describe node data-plane-1
+
+
+
+
+
+
+
+
+--Goldilocks
+--documentação de instalação
+https://goldilocks.docs.fairwinds.com/installation/#installation-2
+
+--values
+https://artifacthub.io/packages/helm/fairwinds-stable/goldilocks
+
+--instalação
+helm install goldilocks --namespace goldilocks --create-namespace fairwinds-stable/goldilocks -f values.yaml
