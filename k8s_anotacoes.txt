@@ -499,7 +499,7 @@ kubectl describe node data-plane-1
 
 
 
---Goldilocks
+--Goldilocks (estimatica de recursos)
 --documentação de instalação
 https://goldilocks.docs.fairwinds.com/installation/#installation-2
 
@@ -508,3 +508,18 @@ https://artifacthub.io/packages/helm/fairwinds-stable/goldilocks
 
 --instalação
 helm install goldilocks --namespace goldilocks --create-namespace fairwinds-stable/goldilocks -f values.yaml
+
+
+
+
+
+
+
+
+
+
+
+--Probles (Self healing) (heathcheck)
+readiness = Quando a aplicação esta pronta para receber o trafego (ocorre no start do pod)
+Liveness = quando a aplicação já esta no ar, verifica se a aplicação esta saudavel, se começar a dar erro na aplicação o Liveness reinicia o pod
+
