@@ -1,1 +1,1 @@
-export KUBECONFIG=$HOME/.kube/config_210; kubectl get nodes -o wide
+export KUBECONFIG=$HOME/.kube/config_210; kubectl get nodes -o wide; alias k='kubectl'

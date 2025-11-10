@@ -453,32 +453,39 @@ kubectl get po
 request = inicia com x% de cpu ou memoria 
 limits = maximo de recuros que o container pode usar
 
-vi deployment_httpd.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: httpd
+    app: nginx
     ambiente: producao
-  name: httpd
+  name: nginx
 spec:
   strategy: 
     rollingUpdate:
       maxSurge: 10%
       maxUnavailable: 0
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: httpd
+      app: nginx
   template:
     metadata:
       labels:
-        app: httpd
+        app: nginx
         ambiente: producao
     spec:
       containers:
-      - image: httpd
-        name: httpd
+      - image: nginx
+        name: nginx
+        readinessProbe:
+          httpGet:
+            path: "/"
+            port: 80
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: 80
         resources:
           requests:
             cpu: 100m
@@ -522,4 +529,5 @@ helm install goldilocks --namespace goldilocks --create-namespace fairwinds-stab
 --Probles (Self healing) (heathcheck)
 readiness = Quando a aplicação esta pronta para receber o trafego (ocorre no start do pod)
 Liveness = quando a aplicação já esta no ar, verifica se a aplicação esta saudavel, se começar a dar erro na aplicação o Liveness reinicia o pod
+
 

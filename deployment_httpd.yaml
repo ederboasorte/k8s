@@ -2,27 +2,35 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: httpd
+    app: nginx
     ambiente: producao
-  name: httpd
+  name: nginx
 spec:
   strategy: 
     rollingUpdate:
       maxSurge: 10%
       maxUnavailable: 0
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: httpd
+      app: nginx
   template:
     metadata:
       labels:
-        app: httpd
+        app: nginx
         ambiente: producao
     spec:
       containers:
-      - image: httpd
-        name: httpd
+      - image: nginx
+        name: nginx
+        readinessProbe:
+          httpGet:
+            path: "/"
+            port: 80
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: 80
         resources:
           requests:
             cpu: 100m
