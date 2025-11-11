@@ -23,6 +23,11 @@ spec:
       containers:
       - image: nginx
         name: nginx
+        env:
+          - name: ENVIROMENT
+            value: producao
+          - name: ALUNO
+            value: Yasmim
         readinessProbe:
           httpGet:
             path: "/"

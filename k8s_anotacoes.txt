@@ -478,15 +478,7 @@ spec:
       containers:
       - image: nginx
         name: nginx
-        readinessProbe:
-          httpGet:
-            path: "/"
-            port: 80
-        livenessProbe:
-          httpGet:
-            path: "/"
-            port: 80
-        resources:
+         resources:
           requests:
             cpu: 100m
             memory: 56M
@@ -530,4 +522,117 @@ helm install goldilocks --namespace goldilocks --create-namespace fairwinds-stab
 readiness = Quando a aplicação esta pronta para receber o trafego (ocorre no start do pod)
 Liveness = quando a aplicação já esta no ar, verifica se a aplicação esta saudavel, se começar a dar erro na aplicação o Liveness reinicia o pod
 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+    ambiente: producao
+  name: nginx
+spec:
+  strategy: 
+    rollingUpdate:
+      maxSurge: 10%
+      maxUnavailable: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+        ambiente: producao
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        readinessProbe:
+          httpGet:
+            path: "/"
+            port: 80
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 56M
+          limits:
+            cpu: 200m
+            memory: 128M
 
+
+
+
+
+
+
+
+
+
+--Variaveis de ambiente
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+    ambiente: producao
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+        ambiente: producao
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        env:
+          - name: ENVIROMENT
+            value: producao
+          - name: ALUNO
+            value: Yasmim
+
+
+
+
+
+
+
+
+
+
+--DaemonSets
+--DaemonSet é um servico que roda em cada node, se tivermos 3 nodes, teremos e daemonsets um em cada node
+kubectl api-resources | grep -i daemon
+kubectl get ds -A
+kubectl create deploy --image nginx nginx --dry-run -oyaml | kubectl neat > daemonset.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+
+kubectl get ds
+kubectl get po -owide
