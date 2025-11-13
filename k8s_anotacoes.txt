@@ -636,3 +636,59 @@ spec:
 
 kubectl get ds
 kubectl get po -owide
+
+
+
+
+
+
+
+
+
+--Stateful e Stateless
+--local path provisoner
+https://github.com/rancher/local-path-provisioner
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.32/deploy/local-path-storage.yaml
+kubectl get po -n local-path-storage
+kubectl logs -f -n local-path-storage local-path-provisioner-866d54d4c8-fq9sl
+kubectl get storageclass -A
+--adicionar a annotation abaixo (torrnar o local-path como default)
+kubectl edit storageclasses local-path
+  storageclass.kubernetes.io/is-default-class: "true"
+kubectl get storageclasses -A
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+        - name: nginx-html
+          mountPath: "/usr/shared/nginx/html"
+
+  volumeClaimTemplates:
+    - metadata:
+        name: nginx-html      
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1G
+
+kubectl apply -f statefulset.yaml
+kubectl get statefulset
+kubectl get po 
