@@ -692,3 +692,69 @@ spec:
 kubectl apply -f statefulset.yaml
 kubectl get statefulset
 kubectl get po 
+
+
+
+
+
+
+
+
+
+--jobs (batch jobs)
+kubectl api-resources | grep -i jobs
+kubectl explain jobs
+kubectl get job -A
+
+vi job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: echo-command
+spec:
+  template:
+    spec:
+      containers:
+      - name: sleep
+        image: alphine
+        command: 
+          - echo
+          - "Eder Vilela Brandão"
+      restartPolicy: "OnFailure"
+  #ttlSecondsAfterFinished: 0
+
+kubectl apply -f job.yaml
+kubectl get job 
+kubectl get po 
+kubectl logs -f echo-command-pz5kw
+
+
+
+--Cronjob
+https://crontab.guru/
+
+kubectl get cronjob -A
+
+vi cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sleep
+            image: alpine
+            command: 
+              - echo
+              - "Eder Vilela Brandão"
+          restartPolicy: "OnFailure"
+
+kubectl apply -f cronjob.yaml
+kubectl get cronjob -A
+kubectl get job -A
+kubectl get po -A
