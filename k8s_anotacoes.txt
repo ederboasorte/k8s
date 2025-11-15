@@ -766,6 +766,54 @@ kubectl get po -A
 
 
 
---Services
+--Service
 ClusterIP = Exporta sua aplicação para dentro do cluster kubernetes, Utilizado apenas para comunicação internado do cluster, não recebe requsição de fora do cluster
 NodePort = (OBS: Não é muito utilizado), Exporta sua aplicação para fora do cluster, pega uma porta alta do Node (30000 - 32767)(sera a mesma porta em todos os nodes) e vincula a porta do pod
+LoadBalancer = (Mais utilizado em cloud, se usar no baremetal precisa do metallb) 
+ExternalName = Redirecionamento de dns para uma aplicação externa, quando utilizar? quando vc tem um banco de dados externo e sua aplicação dentro co cluster precisa acesso esse banco de dados via dns vc cria um ExternalName
+
+kubectl api-resources | grep -i services
+kubectl get services -A
+kubectl get services kubernetes -n default -o yaml
+
+vi deployment_nginx.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+
+
+vi services_nginx.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+      app: nginx
+  ports:
+  - name: https
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+
+
+kubectl apply -f deployment_nginx.yaml
+kubectl aplly -f services_nginx.yaml
+kubectl get po 
+kubectl get svc -A
