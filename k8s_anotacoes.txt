@@ -758,3 +758,14 @@ kubectl apply -f cronjob.yaml
 kubectl get cronjob -A
 kubectl get job -A
 kubectl get po -A
+
+
+
+
+
+
+
+
+--Services
+ClusterIP = Exporta sua aplicação para dentro do cluster kubernetes, Utilizado apenas para comunicação internado do cluster, não recebe requsição de fora do cluster
+NodePort = (OBS: Não é muito utilizado), Exporta sua aplicação para fora do cluster, pega uma porta alta do Node (30000 - 32767)(sera a mesma porta em todos os nodes) e vincula a porta do pod
