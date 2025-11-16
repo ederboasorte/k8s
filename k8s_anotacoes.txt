@@ -375,6 +375,10 @@ kubectl get po --show-labels
 kubectl get po -l ambiente=producao
 
 
+--Adicionar label manualmente em um POD, Deploy etc
+kubectl label pod <nome_do_pod> app=nginx
+kubectl get deployment --show-labels
+
 
 
 
@@ -817,3 +821,50 @@ kubectl apply -f deployment_nginx.yaml
 kubectl aplly -f services_nginx.yaml
 kubectl get po 
 kubectl get svc -A
+
+kubectl run --image alpine -it demo sh
+apk add curl
+curl nginx
+curl nginx.default.svc.cluster.local
+curl <ip_do_service>
+
+
+
+
+
+
+
+
+--Criar service via linha de comando (expose)
+kubectl expose deployment nginx -n default --port 80 --target-port 80
+kubectl get services -A
+
+
+
+
+
+
+
+
+
+--DNS
+kubectl run --image alpine -it demo sh
+apk add curl
+apk add bind-tools
+curl nginx
+host nginx #saida: nginx.default.svc.cluster.local has address 10.99.33.179
+curl nginx.default.svc.cluster.local
+
+
+
+
+
+--Endpoints
+kubectl get endpoints
+kubectl get ep
+kubectl get endpointslices
+kubectl describe endpointslices nginx 
+
+
+
+
