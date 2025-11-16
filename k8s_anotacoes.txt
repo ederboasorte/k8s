@@ -912,6 +912,8 @@ spec:
     - port: 80
       targetPort: 80
   type: LoadBalancer
+  internalTrafficPolicy: local
+  externalTrafficPolicy: Cluster
 
 kubectl apply -f services_nginx.yaml
 kubectl get services
@@ -1046,3 +1048,13 @@ kubectl run --image alpine -it demo sh
 apk add bind-tools
 host blog
 host -t cname blog
+
+
+
+
+
+
+
+
+
+
