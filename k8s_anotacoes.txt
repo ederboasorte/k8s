@@ -780,6 +780,9 @@ kubectl api-resources | grep -i services
 kubectl get services -A
 kubectl get services kubernetes -n default -o yaml
 
+
+
+--ClusterIP
 vi deployment_nginx.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -867,4 +870,179 @@ kubectl describe endpointslices nginx
 
 
 
+--nodePort
+kubectl get services
 
+vi services_nginx.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+      app: nginx
+  ports:
+  - name: https
+    port: 80
+    targetPort: 80
+  type: NodePort
+
+kubectl apply -f services_nginx.yaml
+kubectl get services
+
+
+
+
+
+
+--LoadBalancer
+kubectl get services
+
+services_nginx.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  selector:
+      app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
+
+kubectl apply -f services_nginx.yaml
+kubectl get services
+
+
+
+
+
+
+
+--metalLB
+--documentação
+https://metallb.universe.tf/installation/
+
+--validar modo de execução (IPVS ou iptables)
+kubectl get cm -n kube-system kube-proxy -o yaml | grep -i mode
+
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.15.2/config/manifests/metallb-native.yaml
+kubectl get po -n metallb-system
+mkdir metallb
+cd metallb
+
+vi manifests.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: private-subnet-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.15.245-192.168.15.249
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: private-subnet-advertisement
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - private-subnet-pool
+
+kubectl apply -f manifests.yaml
+kubectl get svc
+
+
+
+
+
+
+
+--Headless service (usado na exposição de aplicações statefulsets)
+--Headless service expoe o serviço mas na faz o balanceamento de carga
+
+vi statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: nginx
+  name: nginx-master
+spec:
+  serviceName: nginx-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+        - name: nginx-html
+          mountPath: "/usr/shared/nginx/html"
+  volumeClaimTemplates:
+    - metadata:
+        name: nginx-html      
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1G
+
+kubectl apply -f statefulset.yaml
+kubectl get po
+
+vi headless.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-headless
+  labels:
+    app: nginx
+spec:
+  selector:
+      app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+  clusterIP: None
+
+kubectl apply -f headless.yaml
+kubectl get po svc
+kubectl run --image alpine -it demo sh
+apk add bind-tools
+host kubernetes
+host nginx-headless
+host nginx-master-0.nginx-headless
+
+
+
+
+
+
+--ExterrnalName
+vi external-name.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog
+spec:
+  type: ExternalName
+  externalName: google.com
+
+kubectl apply -f external-name.yaml
+kubectl get svc 
+kubectl run --image alpine -it demo sh
+apk add bind-tools
+host blog
+host -t cname blog

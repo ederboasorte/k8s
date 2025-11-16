@@ -3,8 +3,9 @@ kind: StatefulSet
 metadata:
   labels:
     app: nginx
-  name: nginx
+  name: nginx-master
 spec:
+  serviceName: nginx-headless
   replicas: 3
   selector:
     matchLabels:
