@@ -1061,6 +1061,7 @@ host -t cname blog
 --Ingress
 --Documentação
 https://github.com/kubernetes/ingress-nginx
+https://kubernetes.io/docs/concepts/services-networking/ingress/
 
 --Fluxo
 LoadBalancer > ingress > services > pod
@@ -1083,6 +1084,128 @@ kubectl edit ingressclass nginx
 annotations:
   ingressclass.kubernetes.io/is-default-class: "true"
 
+kubectl get ingressclass nginx -o yaml
 
 
 
+
+---teste
+kubectl get deployment
+kubectl get po
+
+vi deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+
+kubectl apply -f deployment.yaml
+kubectl get deployment
+kubectl get po
+kubectl get svc
+kubectl get endpoints
+
+vi services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  selector:
+      app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+
+kubectl apply -f services.yaml
+kubectl get svc
+kubectl get endpoints
+kubectl get ingress
+
+vi ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-service-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: nginx.demo.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+
+kubectl apply -f ingress.yaml
+kubectl get ingress
+kubectl get svc -n ingress-nginx ##pegar ip EXTERNAL-IP
+kubectl logs -f svc/ingress-nginx-controller -n ingress-nginx
+curl <EXTERNAL-IP> -I #deve retornar 404
+curl <EXTERNAL-IP> -H "Host: nginx.demo.com" -I #deve retornar a pagina do nginx
+kubectl get po -n ingress-nginx
+kubectl logs -f -n ingress-controller ingress-nginx-controller-565c7596d-hdgt7
+
+
+
+
+
+
+
+
+--Traefik como ingress controller
+https://doc.traefik.io/traefik/getting-started/install-traefik/
+
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+helm install traefik traefik/traefik --namespace traefik --create-namespace --set logs.access.enabled=true
+kubectl get po -n traefik
+kubectl get ingressclasses
+kubectl get svc -n traefik
+kubectl logs -f -n traefik traefik-5d44fddd44-2j2lp
+
+vi ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-service-ingress
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: nginx.demo.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+
+kubectl apply -f ingress.yaml
+kubectl get svc -n traefik #pegar o EXTERNAL-IP
+curl 192.168.15.245 -I
+curl 192.168.15.245 -H "Host: nginx.demo.com" -I
