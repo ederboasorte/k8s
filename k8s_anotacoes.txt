@@ -1058,3 +1058,31 @@ host -t cname blog
 
 
 
+--Ingress
+--Documentação
+https://github.com/kubernetes/ingress-nginx
+
+--Fluxo
+LoadBalancer > ingress > services > pod
+
+
+wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.14.0/deploy/static/provider/baremetal/deploy.yaml
+mv deploy.yaml ingress.yaml
+
+vi ingress.yaml #alterar de NodePort para LoadBalancer
+De:
+type: NodePort
+Para:
+type: LoadBalancer
+
+kubectl apply -f ingress.yaml
+kubectl get po -n ingress-nginx
+kubectl get svc -n ingress-nginx
+kubectl get ingressclass
+kubectl edit ingressclass nginx
+annotations:
+  ingressclass.kubernetes.io/is-default-class: "true"
+
+
+
+
