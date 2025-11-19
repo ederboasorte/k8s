@@ -1209,3 +1209,38 @@ kubectl apply -f ingress.yaml
 kubectl get svc -n traefik #pegar o EXTERNAL-IP
 curl 192.168.15.245 -I
 curl 192.168.15.245 -H "Host: nginx.demo.com" -I
+
+
+
+
+
+
+
+
+--Rewrite Path com Nginx
+kubectl get ingress
+kubectl get ingressclasses
+
+vi ingress_resource.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-service-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /nginx(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+
+kubectl apply -f ingress.yaml
+kubectl get ingress
