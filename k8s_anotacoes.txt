@@ -1309,3 +1309,63 @@ curl 192.168.15.246 -H "host: nginx.demo.com" -I
 curl 192.168.15.246 -H "host: nginx.demo.com" -I -L
 curl 192.168.15.246 -H "host: nginx.demo.com" -I -L -k
 curl 192.168.15.246 -H "host: nginx.demo.com" -L -k -v
+
+
+
+
+
+
+
+
+
+--ConfigMap
+--Documentação
+https://kubernetes.io/docs/concepts/configuration/configmap/#configmap-object
+
+kubectl api-resources | grep -i configmap
+kubectl get configmap -A
+kubectl get configmap -n kube-system codedns -o yaml
+
+--criar configmap via linha de comando (não usual, recomendado via yaml)
+kubectl create configmap my-config --from-literal=key1=config1 --from-literal=key2=config2 --from-literal=nome=yasmim
+kubectl get configmap
+kubectl get configmap my-config
+
+--criar configmap via yaml
+vi configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-demo
+data:
+  virtual_host: "vhost1.localhost.com"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginxc
+  name: nginxc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginxc
+  template:
+    metadata:
+      labels:
+        app: nginxc
+    spec:
+      containers:
+      - image: nginx
+        name: nginxc
+        env:  
+          - name: VIRTUAL_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: nginx-demo
+                key: virtual_host
+
+kubectl get configmap
+kubectl get configmap nginx-demo -o yaml
+kubectl exec -ti nginxc-556ffbb69b-h7zqh -- env | grep VIRTUAL_HOST
