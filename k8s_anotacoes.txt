@@ -1244,3 +1244,68 @@ spec:
 
 kubectl apply -f ingress.yaml
 kubectl get ingress
+
+
+
+
+
+
+
+
+--TLS (na camada do ingress)
+--Documentação
+https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+
+--Gerar o certificado
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj '/CN=*.demo.com/O=edervilela' -addext 'subjectAltName = DNS:*.demo.com'
+ls -lrt tls.crt tls.key
+openssl x509 -in tls.crt -text
+
+--Secret
+kubectl get secret
+kubectl create  secret tls demo-domain-secret --key tls.key --cert tls.crt
+kubectl get secret
+kubectl get secret demo-domain-secret -o yaml #pegar o conteudo do tsl.crt
+echo "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURURENDQWpTZ0F3SUJBZ0lVZkx3THpsMHBmSzRwVW9RdTg3c1JhZkxtdDJRd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRVRNQkVHQTFVRUF3d0tLaTVrWl
+cxdkxtTnZiVEVUTUJFR0ExVUVDZ3dLWldSbGNuWnBiR1ZzWVRBZQpGdzB5TlRFeE1qQXhNekF4TXpoYUZ3MHlOakV4TWpBeE16QXhNemhhTUNveEV6QVJCZ05WQkFNTUNpb3VaR1Z0CmJ5NWpiMjB4RXpBUkJnTlZCQW
+9NQ21Wa1pYSjJhV3hsYkdFd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEZ2pEcmFYV2UrQVpyUUExR1ZoOG9ZL1AxWUpGYUZSNktHNFlNUEVMeVJxNFRITDhkOQpUQ1RKQkowazg3Mm
+VGaXF6TzlpUDVpVWNGLy9lV3hpUVc3VEgzbHN6ZlJjdmVOMy9BbWU5dGVTL094ZnI0TUJVCmpMRWgzbGZpMUxGZ3JLaUJTMkpmb0RCQ2xXVGYrd3ptbllTVTR3RHFld2tNQmlDMTVoVjFybFRkK01IZmIxT1EKdVlTKz
+JmVzNzQm9BVGhOd1d6NDRQVXRRZmVWNERnMVBBMUlrZEd0eFk5UWNramhLTTRBZEVwb3Mzb2krNFNHSgpLTnQrekNRWFA3dTJVTU9zL2o1Y2duczVvYVJJUG1uL2FzcWlsZjJqMkpCLzdIRDlmanFRem52UmFvOWxyej
+FqCkhXMWhUWThvdlg2ald6M0RnRnNTQWlvZVVDUmR4eDNqYjFiTEFnTUJBQUdqYWpCb01CMEdBMVVkRGdRV0JCUkIKQjAvdkpXQnphRnIrYjI1K0g4U25vVXo3ZFRBZkJnTlZIU01FR0RBV2dCUkJCMC92SldCemFGci
+tiMjUrSDhTbgpvVXo3ZFRBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUJVR0ExVWRFUVFPTUF5Q0Npb3VaR1Z0Ynk1amIyMHdEUVlKCktvWklodmNOQVFFTEJRQURnZ0VCQU5pL0lTL1FuUTFIT0d3TThuRmt1ckRxd1FLM0
+FaSS9vY0VXNzNZZmJnL0kKYW0zWlR4ZFIwWFVjVmhWQ0hBVkZSRDlmVUpzWnRzWTZLM1FLUXhONVovQ3dRaFBuSkhqMkRoYUVpTVVkaGlhegpMU25ZWUh3ZnVQbGt1bXBpNmhlbFB5emVobWFJQ0YxSHNXQUprbllabT
+JzT2pOc3pRRWFHUGhXY1QvN2VaQjR1CmdLK3dQM3dETUk5Z20xVU9JUTVIZHhZb2swTHFqWDBITjBRK0wzMXJnQS9GeDQvejF6aUQwcmExNklGcjh1L1oKYW5YMFRqZXYyQ0pFRXVmOEdmWCt2NEVwajdFbldkZjJOaG
+xDMnpSQVVRYUU5UkJXMm5EbzNTTDhsUlA4NjJJawpJQXlyUFJVRkY2SnNrd2xiaXFxTEhrUmlRQ3loSkF5OXo3SUNWNC9NQjlnPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==" | base64 -d
+
+
+vi ingress_resource.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-service-ingress
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+      - "*.demo.com"
+    secretName: demo-domain-secret
+  rules:
+  - host: "nginx.demo.com"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+            
+kubectl get ingress
+kubectl describe ingress web-service-ingress
+kubectl get svc -n ingress-nginx #pegar o EXTERNAL-IP
+curl 192.168.15.246 -H "host: nginx.demo.com"
+curl 192.168.15.246 -H "host: nginx.demo.com" -I
+curl 192.168.15.246 -H "host: nginx.demo.com" -I -L
+curl 192.168.15.246 -H "host: nginx.demo.com" -I -L -k
+curl 192.168.15.246 -H "host: nginx.demo.com" -L -k -v
