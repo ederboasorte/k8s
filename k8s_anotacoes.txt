@@ -1509,3 +1509,178 @@ kubectl apply -f secret.yaml
 kubectl get secret
 kubectl get secret credentials -o yaml
 kubectl exec -ti nginxc-66688876b4-bzxdv -- ls -l /tmp
+
+
+
+
+
+
+
+
+
+
+
+
+--Storage
+--Documentação
+https://kubernetes.io/docs/concepts/storage/volumes/
+
+PersistentVolume = PV = físico, mais usados em storages do tipo local(monta um filesystem no node e montar no pod)
+PersistentVolumeClaim = PVC = usado pela aplicação para pedir um pedaço de storage para o PV
+
+--Storage static
+Para o aprovisionamento estático é preciso de 3 componentes, criar um pv, um pvc e montar no deployment  
+
+--PV
+kubectl api-resources | grep -i persistent
+kubectl get pv
+vi pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: example-pv
+spec:
+  capacity:
+    storage: 2Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  local:
+    path: /data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - data-plane-1
+
+kubectl apply -f pv.yaml
+kubectl get pv
+
+
+
+--PVC
+kubectl get pvc -A
+
+vi pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: ""
+  volumeName: example-pv
+
+kubectl apply -f pvc.yaml
+kubectl get pvc
+
+
+--Deploment
+vi deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: local
+            mountPath:  /data
+      volumes: 
+        - name: local
+          persistentVolumeClaim:
+            claimName: myclaim 
+
+kubectl apply -f deployment.yaml
+kubectl get deployment
+kubectl get po
+kubectl get pv
+kubectl get pvc         
+
+
+
+
+
+--Storage Dynamico
+Para o aprovisionamento dinamico é preciso do starageClass, pvc e montar o volume pelo deployment
+
+--local path provisoner
+https://github.com/rancher/local-path-provisioner
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.32/deploy/local-path-storage.yaml
+kubectl get po -n local-path-storage
+kubectl logs -f -n local-path-storage local-path-provisioner-866d54d4c8-fq9sl
+kubectl get storageclass -A
+--adicionar a annotation abaixo (torrnar o local-path como default)
+kubectl edit storageclasses local-path
+  storageclass.kubernetes.io/is-default-class: "true"
+kubectl get storageclasses -A
+
+
+vi pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: "local-path"
+
+
+kubectl apply -f pvc.yaml
+
+
+vi deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: local
+            mountPath: /data
+      volumes: 
+        - name: local
+          persistentVolumeClaim:
+            claimName: myclaim 
+
+k apply -f deployment.yaml         
