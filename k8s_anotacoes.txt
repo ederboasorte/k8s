@@ -1684,3 +1684,92 @@ spec:
             claimName: myclaim 
 
 k apply -f deployment.yaml         
+
+
+
+
+
+
+
+
+
+
+--HPA
+--Documentação
+https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+
+
+--Metrics-server
+--Documentação
+https://github.com/kubernetes-sigs/metrics-server
+
+--instalação
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+--obs: em cluster kind adicionar o parametro abaixo
+kubectl edit deployment metrics-server -n kube-system
+args:
+  - --kubelet-insecure-tls
+  - --kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP
+
+
+vi deployment.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nginx-hpa
+spec:
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 60
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        resources:
+          requests:
+            cpu: 10m
+          limits:
+            cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: nginx
+  type: ClusterIP
+
+
+kubectl apply -f deployment.yaml
