@@ -1773,3 +1773,175 @@ spec:
 
 
 kubectl apply -f deployment.yaml
+kubectl get po
+kubectl get hpa
+kubectl describe hpa nginx-hpa
+
+
+
+
+
+--stabilization window
+--Documentação
+https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#stabilization-window
+
+vi hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nginx-hpa
+spec:
+  behavior:
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    policies:
+    - type: Percent
+      value: 100
+      periodSeconds: 15
+  scaleUp:
+    stabilizationWindowSeconds: 0
+    policies:
+    - type: Percent
+      value: 100
+      periodSeconds: 15
+    - type: Pods
+      value: 4
+      periodSeconds: 15
+    selectPolicy: Max
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 60
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+
+kubectl apply -f hpa.yaml
+kubectl get hpa
+
+
+
+
+
+
+
+
+
+
+
+--CNI
+--Documentação
+https://kubernetes.io/docs/concepts/services-networking/#the-kubernetes-network-model
+https://github.com/containernetworking/cni
+https://www.cni.dev/docs/spec/
+
+
+
+
+
+
+
+
+
+
+
+
+
+--Upgrade
+1 - Estratégia de atualização de cluster Kuberrnetes (modo raiz que é cobrado no exame da CKA)
+OBS: é um processo manual, não é viavel(faz a atualização dos pacotes via apt, trava os pacotes, faz o draim, restart do kubelet, restarrt do serrviço, coloca novamente no cluster )
+mas se for usar a estratégia acima usar o rancher ou kubespray
+e sempre fazer o upgrade em um ambiente de teste/homologação primenro para depois ir para produção
+--Documentação
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl
+1.1 - fazer um backup do etcd com o kubedump, em caso de problema é só voltar os .yamls
+1.2 - usa a ferramenta Kubent para verificar o clsuter e identifica as api deprecadas
+1.3 - ter uma estrategia de desastre recovery, tudo como IaC para caso de problema subir o ambiente exatamente como é hoje
+1.4 - ajusta as API deprecadas e aplica no cluster
+1.5 - Fazer o upgrade, sempre fazer a atulização uma mainor por vez
+
+--Como fazer upgrade manual no control-plane
+ssh edervilela@192.168.15.210
+kubectl get nodes -o wide
+# If the directory `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.
+# sudo mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+apt update
+apt list -a kubeadm
+dpkg -l | gre -i kube
+apt-mark unhold kubeadm
+dpkg -l | gre -i kube
+apt install kubeadm -y
+kubeadm version
+apt-mark hold kubeadm
+kubeadm upgrade plan
+kubeadm upgrade apply v1.34.2
+kubectl get nodes
+kubectl drain <nome_do_control_plane> --ignore-daemonsets --delete-emptydir-data --force
+kubectl get nodes
+apt-mark unhold kubectl kubelet
+dpkg -l | gre -i kube
+apt install kubectl kubelet -y
+kubectl version
+systemctl restart kubelet
+systemctl status kubelet
+kubectl get node
+kubectl uncordon control-plane
+kubectl get nodes
+apt-mark hold kubectl kubelet
+
+
+
+--Como fazer upgrade dos workers
+ssh edervilela@192.168.15.211
+dpkg -l | grep -i kube
+apt-mark unhold kubeadm kubectl kubelet
+gpkg -l | grep -i kube
+# If the directory `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.
+# sudo mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
+
+apt update
+apt list -a kubeadm
+apt install kubeadm -y
+kubeadm upgrade node
+export KUBECONFIG=/etc/kubernetes/admin.conf
+kubectl drain data-plane-1 --ignore-daemonsets --delete-emptydir-data --force
+apt install kubectl kubelet -y
+kubectl version
+systemctl restart kubelet
+kubectl get nodes
+kubectl uncordon <nome_node>
+kubectl get nodes
+apt-mark hold kubeadm kubectl kubelet
+dpkg -l | grep -i kube
+
+
+
+
+
+2 - Estratégia de atualização eks (como eu atualizaria um cluserr eks)
+--Documentação
+https://docs.aws.amazon.com/eks/latest/userguide/update-cluster.html
+na console clicar um upgrade, já vai ter snapshot do etcd, cria duplicidade do api-server, não tem downtime, 
+
+
+
+
+
+
+
+
