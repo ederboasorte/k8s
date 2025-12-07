@@ -1945,3 +1945,169 @@ na console clicar um upgrade, já vai ter snapshot do etcd, cria duplicidade do 
 
 
 
+
+
+--Schedule 
+
+--Node Selector (não recomendado usar)(recomenda-se usar nodeAffinity)
+kubectl get nodes
+kubectl get nodes --show-labels
+
+vi deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      nodeSelector: 
+        kubernetes.io/hostname: data-plane-1
+      containers:
+      - image: nginx
+        name: nginx
+
+kubectl apply -f deploymnet.yaml
+kubectl get po -o wide
+
+
+
+
+--NodeAffinity
+--documentação
+https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+
+kubectl get nodes --show-labels
+
+vi deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      affinity:
+        nodeAffinity:
+          # requiredDuringSchedulingIgnoredDuringExecution:
+          #   nodeSelectorTerms:
+          #   - matchExpressions:
+          #     - key: kubernetes.io/hostname
+          #       operator: In
+          #       values:
+          #       - data-plane-3
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - data-plane-3
+      containers:
+      - image: nginx
+        name: nginx
+
+kubectl apply -f deployment.yaml
+kubectl get po -o wide
+
+
+
+
+
+
+
+--PodAffinity
+--Documentação
+https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+
+
+
+
+
+
+
+
+
+
+--Taints e tolerations
+taint negando
+tolerations permitindo
+
+kubectl taint node comunidade-devops-worker nodegroup=backend:NoSchedule
+kubectl create deploy --image nginx --replicas 10 nginx
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      tolerations:
+        - key: nodegroup
+          operator: Equal
+          value: backend
+          effect: NoSchedule
+      containers:
+      - image: nginx
+        name: nginx
+
+
+
+
+
+crashloopbackoff = problema na aplicação, erro no processo da aplicação dentro do container
+
+imagepullbackoff = não consigiu baixar a imagem (login errado, nome da imagem inexistente, erro de certificado, firewall )
+
+
+
+--netshoot
+--Pod com todas as ferramentas nessarias para fazer um throubleshooting
+docker run -it nicolaka/netshoot sh
+
+vi netshoot.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: netshoot
+  name: netshoot
+spec:
+  containers:
+  - image: nicolaka/netshoot
+    name: netshoot
+    command:
+      - sleep
+      - infinity
+
+kubectl apply -f netshoot.yaml
+kubectl exec -ti netshoot -- sh
